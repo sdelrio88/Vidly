@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Web;
+using System.Data.Entity;  //needed for Include()
 using System.Web.Mvc;
 using Vidly.Models;
 using Vidly.ViewModels;
@@ -10,6 +11,18 @@ namespace Vidly.Controllers
 {
     public class MoviesController : Controller
     {
+        private ApplicationDbContext _context;
+
+        public MoviesController()
+        {
+            _context = new ApplicationDbContext();
+        }
+
+        protected override void Dispose(bool disposing)
+        {
+            _context.Dispose();
+        }
+
         // GET: Movies/Random
         public ActionResult Random()
         {
@@ -32,27 +45,68 @@ namespace Vidly.Controllers
 
         public ActionResult Edit(int id)
         {
-            return Content("id=" + id);
+            var movie = _context.Movies.SingleOrDefault(c => c.Id == id);
+
+            if (movie == null)
+                return HttpNotFound();
+
+            var viewModel = new MovieFormViewModel
+            {
+                Movie = movie,
+                Genres = _context.Genres.ToList()
+            };
+
+            return View("MovieForm", viewModel);
         }
 
-        public ActionResult Index(int? pageIndex)
+        public ActionResult New()
         {
-            if (!pageIndex.HasValue)
-                pageIndex = 1;
+            var genres = _context.Genres.ToList();
 
-            var movies = new List<Movie>
+            var viewModel = new MovieFormViewModel
             {
-                new Movie { Name = "Terminator"},
-                new Movie { Name = "Star Wars"}
+                Genres = genres
             };
+            return View("MovieForm", viewModel);
+        }
 
-            var viewModel = new AllMoviesViewModel
+        [HttpPost]
+        public ActionResult Save(Movie movie)
+        {
+            if (movie.Id == 0)
             {
-                Movies = movies,
-                PageIndex = pageIndex
-            };
+                Console.WriteLine("movie ID is 0");
+                _context.Movies.Add(movie);
+            }
+            else
+            {
+                Console.WriteLine("movie ID is not 0");
+                var movieInDb = _context.Movies.Single(c => c.Id == movie.Id);
 
-            return View(viewModel);
+                movieInDb.Name = movie.Name;
+                movieInDb.ReleasedDate = movie.ReleasedDate;
+                movieInDb.GenreId = movie.GenreId;
+                movieInDb.NumberInStock = movie.NumberInStock;
+            }
+
+            _context.SaveChanges();
+
+
+            return RedirectToAction("Index", "Movies");
+        }
+
+        public ActionResult Index()
+        {
+
+            var movies = _context.Movies.Include(m => m.Genre).ToList();
+
+            return View(movies);
+        }
+
+        public ActionResult Details(int id)
+        {
+            var movie = _context.Movies.Include(m => m.Genre).SingleOrDefault(m => m.Id == id);
+            return View(movie);
         }
 
         [Route("movies/released/{year}/{month:regex(\\d{2}):range(1,12)}")]
