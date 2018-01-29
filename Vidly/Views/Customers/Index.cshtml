@@ -5,6 +5,9 @@
 }
 
 <h2>Customers</h2>
+
+<h2>@Html.ActionLink("New Customer", "New", "Customers", new { @class = "btn btn-primary" })</h2>
+
 <table id="customers" class="table table-bordered table-hover">
     <thead>
         <tr>
@@ -32,6 +35,9 @@
 
     <script>
         $(document).ready(function () {
+
+            $("#customers").DataTable();
+
             $("#customers").on("click",".js-delete", function () {
                 var button = $(this);
 
