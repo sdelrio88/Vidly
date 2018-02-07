@@ -19,9 +19,16 @@ namespace Vidly.Controllers.Api
         }
 
         //GET /api/movies
-        public IEnumerable<Movie> GetMovies()
+        public IEnumerable<Movie> GetMovies(string query = null)
         {
-            return _context.Movies.Include(m => m.Genre).ToList();
+            var moviesQuery = _context.Movies
+                 .Include(m => m.Genre)
+                 .Where(m => m.NumberAvailable > 0);
+            
+            if (!String.IsNullOrWhiteSpace(query))
+                moviesQuery = moviesQuery.Where(m => m.Name.Contains(query));
+
+            return moviesQuery.ToList();
         }
 
         //GET /api/movies/1
@@ -37,6 +44,7 @@ namespace Vidly.Controllers.Api
 
         // POST /api/movies
         [HttpPost]
+        [Authorize(Roles = RoleName.CanManageMovies)]
         public Movie CreateMovie(Movie movie)
         {
             if (!ModelState.IsValid)
@@ -51,6 +59,7 @@ namespace Vidly.Controllers.Api
 
         // PUT  /api/movies/1
         [HttpPut]
+        [Authorize(Roles = RoleName.CanManageMovies)]
         public void UpdateMovie(int id, Movie movie)
         {
             if (!ModelState.IsValid)
@@ -71,6 +80,7 @@ namespace Vidly.Controllers.Api
 
         //DELETE  /api/movies/1
         [HttpDelete]
+        [Authorize(Roles = RoleName.CanManageMovies)]
         public void DeleteMovie(int id)
         {
             var movieInDb = _context.Movies.SingleOrDefault(m => m.Id == id);
